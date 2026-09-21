@@ -2,6 +2,7 @@ import { create } from '@/actions/App/Http/Controllers/TicketController';
 import Footer from '@/components/landing/Footer';
 import Header from '@/components/landing/Header';
 import { RatingStars } from '@/components/rating-stars';
+import { workshopAvatarUrl } from '@/lib/avatar';
 import type { Workshop } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 
@@ -32,20 +33,14 @@ export default function WorkshopsShow({ workshop }: Props) {
                     <section className="border-border/40 rounded-2xl border bg-white p-6 shadow-sm sm:p-8">
                         <div className="flex flex-wrap items-start justify-between gap-6">
                             <div className="flex items-center gap-4">
-                                {workshop.logo ? (
-                                    <img
-                                        src={workshop.logo}
-                                        alt={workshop.name}
-                                        className="h-16 w-16 shrink-0 rounded-2xl object-cover"
-                                    />
-                                ) : (
-                                    <div
-                                        className="bg-primary/10 text-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-bold"
-                                        aria-hidden="true"
-                                    >
-                                        {workshop.name.charAt(0)}
-                                    </div>
-                                )}
+                                <img
+                                    src={
+                                        workshop.logo ??
+                                        workshopAvatarUrl(workshop.name)
+                                    }
+                                    alt={workshop.name}
+                                    className="h-16 w-16 shrink-0 rounded-2xl object-cover"
+                                />
                                 <div>
                                     <h1 className="text-heading text-xl font-bold tracking-tight sm:text-2xl">
                                         {workshop.name}

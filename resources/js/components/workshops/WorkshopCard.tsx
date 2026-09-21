@@ -1,5 +1,6 @@
 import { show } from '@/actions/App/Http/Controllers/WorkshopController';
 import { RatingStars } from '@/components/rating-stars';
+import { workshopAvatarUrl } from '@/lib/avatar';
 import type { Workshop } from '@/types';
 import { Link } from '@inertiajs/react';
 
@@ -13,20 +14,11 @@ export default function WorkshopCard({ workshop }: Props) {
     return (
         <div className="border-border/40 flex h-full flex-col gap-4 rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-center gap-3">
-                {workshop.logo ? (
-                    <img
-                        src={workshop.logo}
-                        alt={workshop.name}
-                        className="h-12 w-12 shrink-0 rounded-xl object-cover"
-                    />
-                ) : (
-                    <div
-                        className="bg-primary/10 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold"
-                        aria-hidden="true"
-                    >
-                        {workshop.name.charAt(0)}
-                    </div>
-                )}
+                <img
+                    src={workshop.logo ?? workshopAvatarUrl(workshop.name)}
+                    alt={workshop.name}
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                />
                 <div className="min-w-0">
                     <h3 className="text-heading truncate font-bold">
                         {workshop.name}
