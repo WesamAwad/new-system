@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@theme {
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+
+    /* Primary — SwiftFix brand orange (Figma #fd761a) */
+    --color-primary: #fd761a;
+    --color-primary-hover: #e86810;
+
+    /* Accent — emphasis / auth links (Figma #9d4300) */
+    --color-accent: #9d4300;
+
+    /* Brand soft — on-dark badge text (Figma #ffdbca) */
+    --color-brand-soft: #ffdbca;
+
+    /* Secondary — soft indigo wash chips/dividers (Figma #e7eeff) */
+    --color-secondary: #e7eeff;
+
+    /* Surfaces */
+    --color-surface: #f0f3ff;
+    --color-muted: #f9f9ff;
+
+    /* Text */
+    --color-foreground: #111c2d;
+    --color-heading: #131b2e;
+    --color-muted-foreground: #45464d;
+    --color-subtle: #76777d;
+    --color-on-brand: #dee8ff;
+
+    /* Borders & dark panel */
+    --color-border: #c6c6cd;
+    --color-brand-ink: #0f172a;
+
+    /* Semantic */
+    --color-success: #059669;
+
+    /* Third-party logo fills (Google) */
+    --color-google-blue: #4285f4;
+    --color-google-green: #34a853;
+    --color-google-yellow: #fbbc05;
+    --color-google-red: #ea4335;
+}
