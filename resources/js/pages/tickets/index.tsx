@@ -1,8 +1,8 @@
 import {
-    create,
     index as ticketsIndex,
     show,
 } from '@/actions/App/Http/Controllers/TicketController';
+import { index as workshopsIndex } from '@/actions/App/Http/Controllers/WorkshopController';
 import { PriorityLabel, StatusBadge } from '@/components/ticket-badges';
 import AppLayout from '@/layouts/app-layout';
 import {
@@ -96,8 +96,11 @@ export default function TicketsIndex({ tickets, filters }: Props) {
                     {hasActiveFilters ? ' (filtered)' : ''}
                 </p>
                 {canCreate && (
-                    <Link href={create()} className={primaryButtonClassName}>
-                        New ticket
+                    <Link
+                        href={workshopsIndex()}
+                        className={primaryButtonClassName}
+                    >
+                        Browse workshops
                     </Link>
                 )}
             </div>
@@ -180,10 +183,10 @@ export default function TicketsIndex({ tickets, filters }: Props) {
                     </p>
                     {canCreate && !hasActiveFilters && (
                         <Link
-                            href={create()}
+                            href={workshopsIndex()}
                             className={`${primaryButtonClassName} mt-4`}
                         >
-                            Create your first ticket
+                            Browse workshops
                         </Link>
                     )}
                     {hasActiveFilters && (

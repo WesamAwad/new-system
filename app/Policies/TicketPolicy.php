@@ -53,7 +53,7 @@ class TicketPolicy
 
         return $user->isCustomer()
             && $ticket->user_id === $user->id
-            && $ticket->status === TicketStatus::Pending;
+            && in_array($ticket->status, [TicketStatus::Pending, TicketStatus::Assigned], true);
     }
 
     public function assign(User $user, Ticket $ticket): bool

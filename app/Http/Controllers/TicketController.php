@@ -8,7 +8,6 @@ use App\Enums\UserRole;
 use App\Http\Requests\IndexTicketRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
-use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\TicketUpdate;
 use App\Models\User;
@@ -55,17 +54,22 @@ class TicketController extends Controller
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request): RedirectResponse|Response
     {
         $this->authorize('create', Ticket::class);
 
-        $workshopId = $request->integer('workshop_id') ?: null;
+        $workshop = Workshop::query()
+            ->with('services.category:id,name,slug')
+            ->find($request->integer('workshop_id'));
+
+        if ($workshop === null) {
+            return redirect()
+                ->route('workshops.index')
+                ->with('error', 'الرجاء اختيار ورشة أولاً لإرسال طلب صيانة.');
+        }
 
         return Inertia::render('tickets/create', [
-            'categories' => Category::query()->active()->orderBy('name')->get(['id', 'name', 'slug', 'base_price']),
-            'preselectedWorkshop' => $workshopId
-                ? Workshop::query()->find($workshopId, ['id', 'name'])
-                : null,
+            'workshop' => $workshop,
         ]);
     }
 

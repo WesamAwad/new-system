@@ -3,12 +3,17 @@
 use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Models\Workshop;
+use App\Models\WorkshopService;
 
 test('customers can create tickets for themselves', function () {
     $customer = User::factory()->customer()->create();
+    $workshop = Workshop::factory()->create();
     $category = Category::factory()->create();
+    WorkshopService::factory()->for($workshop)->create(['category_id' => $category->id]);
 
     $response = $this->actingAs($customer)->post(route('tickets.store'), [
+        'workshop_id' => $workshop->id,
         'category_id' => $category->id,
         'title' => 'Leaking pipe',
         'description' => 'Kitchen sink is leaking heavily.',

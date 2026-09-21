@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Category;
-use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
 

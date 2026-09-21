@@ -5,13 +5,17 @@ use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Models\WorkshopService;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('customer can create read update and soft delete own pending ticket', function () {
     $customer = User::factory()->customer()->create();
     $category = Category::factory()->create();
+    $workshop = Workshop::factory()->create();
+    WorkshopService::factory()->for($workshop)->create(['category_id' => $category->id]);
 
     $create = $this->actingAs($customer)->post(route('tickets.store'), [
+        'workshop_id' => $workshop->id,
         'category_id' => $category->id,
         'title' => 'Broken faucet',
         'description' => 'Water keeps dripping.',
@@ -54,6 +58,7 @@ test('creating a ticket with a workshop pre-assigns its technician', function ()
     $customer = User::factory()->customer()->create();
     $category = Category::factory()->create();
     $workshop = Workshop::factory()->create();
+    WorkshopService::factory()->for($workshop)->create(['category_id' => $category->id]);
 
     $create = $this->actingAs($customer)->post(route('tickets.store'), [
         'category_id' => $category->id,
@@ -71,17 +76,47 @@ test('creating a ticket with a workshop pre-assigns its technician', function ()
         ->and($ticket->status)->toBe(TicketStatus::Assigned);
 });
 
-test('ticket creation page shows the preselected workshop', function () {
+test('a category not offered by the workshop is rejected', function () {
+    $customer = User::factory()->customer()->create();
+    $category = Category::factory()->create();
+    $workshop = Workshop::factory()->create();
+
+    $this->actingAs($customer)->post(route('tickets.store'), [
+        'workshop_id' => $workshop->id,
+        'category_id' => $category->id,
+        'title' => 'Cracked screen',
+        'description' => 'Screen cracked after a drop.',
+        'address' => 'Gaza',
+        'priority' => 'medium',
+    ])->assertInvalid(['category_id']);
+});
+
+test('ticket creation page shows the selected workshop and its services', function () {
     $customer = User::factory()->customer()->create();
     $workshop = Workshop::factory()->create();
+    $category = Category::factory()->create();
+    WorkshopService::factory()->for($workshop)->create(['category_id' => $category->id]);
 
     $this->actingAs($customer)
         ->get(route('tickets.create', ['workshop_id' => $workshop->id]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('tickets/create')
-            ->where('preselectedWorkshop.id', $workshop->id)
-            ->where('preselectedWorkshop.name', $workshop->name));
+            ->where('workshop.id', $workshop->id)
+            ->where('workshop.name', $workshop->name)
+            ->has('workshop.services', 1));
+});
+
+test('ticket creation requires a valid workshop and redirects to the directory otherwise', function () {
+    $customer = User::factory()->customer()->create();
+
+    $this->actingAs($customer)
+        ->get(route('tickets.create'))
+        ->assertRedirect(route('workshops.index'));
+
+    $this->actingAs($customer)
+        ->get(route('tickets.create', ['workshop_id' => 999999]))
+        ->assertRedirect(route('workshops.index'));
 });
 
 test('tickets index shows empty state props when customer has no tickets', function () {

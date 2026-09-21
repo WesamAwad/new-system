@@ -3,6 +3,8 @@
 use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Models\Workshop;
+use App\Models\WorkshopService;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('login page renders inertia component', function () {
@@ -32,18 +34,20 @@ test('tickets index shares paginated tickets and auth role', function () {
             ->has('flash'));
 });
 
-test('ticket create page receives active categories', function () {
+test('ticket create page receives the selected workshop and its services', function () {
     $customer = User::factory()->customer()->create();
-    Category::factory()->create(['name' => 'Active Cat']);
-    Category::factory()->inactive()->create(['name' => 'Inactive Cat']);
+    $workshop = Workshop::factory()->create();
+    $category = Category::factory()->create(['name' => 'Active Cat']);
+    WorkshopService::factory()->for($workshop)->create(['category_id' => $category->id]);
 
     $this->actingAs($customer)
-        ->get(route('tickets.create'))
+        ->get(route('tickets.create', ['workshop_id' => $workshop->id]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('tickets/create')
-            ->has('categories', 1)
-            ->where('categories.0.name', 'Active Cat'));
+            ->where('workshop.id', $workshop->id)
+            ->has('workshop.services', 1)
+            ->where('workshop.services.0.category.name', 'Active Cat'));
 });
 
 test('ticket show page includes nested relations without internal notes for customers', function () {

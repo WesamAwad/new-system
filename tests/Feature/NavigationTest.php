@@ -14,10 +14,13 @@ test('home page renders for guests with auth links available via shared props', 
 
 test('authenticated users can open primary navigation destinations', function () {
     $customer = User::factory()->customer()->create();
+    $workshop = Workshop::factory()->create();
 
     $this->actingAs($customer)->get(route('home'))->assertOk();
     $this->actingAs($customer)->get(route('tickets.index'))->assertOk();
-    $this->actingAs($customer)->get(route('tickets.create'))->assertOk();
+    $this->actingAs($customer)
+        ->get(route('tickets.create', ['workshop_id' => $workshop->id]))
+        ->assertOk();
     $this->actingAs($customer)->get(route('categories.index'))->assertOk();
 });
 

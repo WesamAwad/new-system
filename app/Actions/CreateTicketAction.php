@@ -13,27 +13,23 @@ use Illuminate\Support\Str;
 class CreateTicketAction
 {
     /**
-     * @param  array{category_id: int, title: string, description: string, address: string, priority: string, workshop_id?: int|null}  $data
+     * @param  array{workshop_id: int, category_id: int, title: string, description: string, address: string, priority: string}  $data
      */
     public function handle(User $user, array $data): Ticket
     {
         return DB::transaction(function () use ($user, $data): Ticket {
-            $workshop = isset($data['workshop_id'])
-                ? Workshop::query()->find($data['workshop_id'])
-                : null;
-
-            $status = $workshop !== null ? TicketStatus::Assigned : TicketStatus::Pending;
+            $workshop = Workshop::query()->findOrFail($data['workshop_id']);
 
             $ticket = Ticket::query()->create([
                 'ticket_number' => $this->generateTicketNumber(),
                 'user_id' => $user->id,
                 'category_id' => $data['category_id'],
-                'assigned_to' => $workshop?->user_id,
+                'assigned_to' => $workshop->user_id,
                 'title' => $data['title'],
                 'description' => $data['description'],
                 'address' => $data['address'],
                 'priority' => $data['priority'],
-                'status' => $status,
+                'status' => TicketStatus::Assigned,
             ]);
 
             TicketUpdate::query()->create([
@@ -41,7 +37,7 @@ class CreateTicketAction
                 'user_id' => $user->id,
                 'message' => 'Ticket created.',
                 'status_from' => null,
-                'status_to' => $status->value,
+                'status_to' => TicketStatus::Assigned->value,
                 'is_internal' => false,
             ]);
 
