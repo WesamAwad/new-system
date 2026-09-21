@@ -42,7 +42,13 @@ class TicketController extends Controller
                         ->orWhere('address', 'like', "%{$search}%");
                 });
             })
-            ->when($filters['status'], fn ($query, string $status) => $query->where('status', $status))
+            ->when($filters['status'], function ($query, string $status): void {
+                if ($status === 'active') {
+                    $query->whereIn('status', [TicketStatus::Assigned->value, TicketStatus::InProgress->value]);
+                } else {
+                    $query->where('status', $status);
+                }
+            })
             ->when($filters['priority'], fn ($query, string $priority) => $query->where('priority', $priority))
             ->latest()
             ->paginate(15)
@@ -80,7 +86,8 @@ class TicketController extends Controller
         $ticket->load([
             'category:id,name,slug',
             'customer:id,name,email,phone',
-            'assignee:id,name,email',
+            'assignee:id,name,email,phone',
+            'assignee.workshop:id,user_id,name,logo,city,address',
             'updates' => fn ($query) => $query->with('user:id,name,role')->latest(),
         ]);
 

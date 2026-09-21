@@ -1,29 +1,33 @@
 import { destroy as destroySession } from '@/actions/App/Http/Controllers/Auth/AuthenticatedSessionController';
 import { index as ticketsIndex } from '@/actions/App/Http/Controllers/TicketController';
 import { index as workshopsIndex } from '@/actions/App/Http/Controllers/WorkshopController';
-import { home, login, register } from '@/routes';
+import { about, contact, home, login, register } from '@/routes';
 import { Form, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 const navLinks: Array<{
     href: string;
     label: string;
-    active?: boolean;
 }> = [
-    { href: '#top', label: 'الرئيسية', active: true },
-    { href: '#services', label: 'خدمات الصيانة' },
+    { href: home.url(), label: 'الرئيسية' },
     { href: workshopsIndex.url(), label: 'الورش المعتمدة' },
-    { href: '#how-it-works', label: 'كيف نعمل' },
-    { href: '#track', label: 'تتبع الطلب' },
+    { href: contact.url(), label: 'تواصل معنا' },
+    { href: about.url(), label: 'من نحن' },
 ];
 
-function isRouteHref(href: string): boolean {
-    return !href.startsWith('#');
+function isActiveHref(currentUrl: string, href: string): boolean {
+    const currentPath = currentUrl.split('?')[0];
+
+    if (href === '/') {
+        return currentPath === '/';
+    }
+
+    return currentPath === href || currentPath.startsWith(`${href}/`);
 }
 
 export default function Header() {
-    const { auth } = usePage().props;
-    const user = auth.user;
+    const { props, url } = usePage();
+    const user = props.auth.user;
     const [menuOpen, setMenuOpen] = useState(false);
 
     return (
@@ -45,13 +49,14 @@ export default function Header() {
 
                 <nav className="hidden items-center gap-6 lg:flex">
                     {navLinks.map((link) => {
+                        const active = isActiveHref(url, link.href);
                         const className = `relative text-sm transition ${
-                            link.active
+                            active
                                 ? 'text-foreground after:bg-primary font-semibold after:absolute after:inset-x-0 after:-bottom-2 after:h-0.5 after:rounded-full'
                                 : 'text-muted-foreground hover:text-foreground'
                         }`;
 
-                        return isRouteHref(link.href) ? (
+                        return (
                             <Link
                                 key={link.href}
                                 href={link.href}
@@ -59,14 +64,6 @@ export default function Header() {
                             >
                                 {link.label}
                             </Link>
-                        ) : (
-                            <a
-                                key={link.href}
-                                href={link.href}
-                                className={className}
-                            >
-                                {link.label}
-                            </a>
                         );
                     })}
                 </nav>
@@ -84,9 +81,10 @@ export default function Header() {
                         <>
                             <Link
                                 href={ticketsIndex()}
-                                className="text-foreground hover:text-primary hidden text-sm font-medium sm:inline"
+                                title={user.name}
+                                className="text-foreground hover:text-primary text-sm font-medium"
                             >
-                                {user.name}
+                                طلباتي
                             </Link>
                             <Form {...destroySession.form()}>
                                 <button
@@ -130,27 +128,24 @@ export default function Header() {
             {menuOpen ? (
                 <div className="border-border/40 border-t bg-white px-4 py-3 lg:hidden">
                     <div className="flex flex-col gap-3 text-right">
-                        {navLinks.map((link) =>
-                            isRouteHref(link.href) ? (
+                        {navLinks.map((link) => {
+                            const active = isActiveHref(url, link.href);
+
+                            return (
                                 <Link
                                     key={link.href}
                                     href={link.href}
                                     onClick={() => setMenuOpen(false)}
-                                    className="text-muted-foreground hover:text-foreground text-sm"
+                                    className={`text-sm ${
+                                        active
+                                            ? 'text-foreground font-semibold'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
                                 >
                                     {link.label}
                                 </Link>
-                            ) : (
-                                <a
-                                    key={link.href}
-                                    href={link.href}
-                                    onClick={() => setMenuOpen(false)}
-                                    className="text-muted-foreground hover:text-foreground text-sm"
-                                >
-                                    {link.label}
-                                </a>
-                            ),
-                        )}
+                            );
+                        })}
                         {!user ? (
                             <Link
                                 href={login()}

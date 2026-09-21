@@ -35,3 +35,8 @@ test('login and register routes remain reachable for guests', function () {
     $this->get(route('login'))->assertOk();
     $this->get(route('register'))->assertOk();
 });
+
+test('guests can reach the about and contact pages', function () {
+    $this->get(route('about'))->assertOk();
+    $this->get(route('contact'))->assertOk();
+});

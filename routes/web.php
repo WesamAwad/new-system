@@ -17,6 +17,9 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/workshops', [WorkshopController::class, 'index'])->name('workshops.index');
 Route::get('/workshops/{workshop}', [WorkshopController::class, 'show'])->name('workshops.show');
 
+Route::get('/about', fn () => Inertia::render('about'))->name('about');
+Route::get('/contact', fn () => Inertia::render('contact'))->name('contact');
+
 Route::middleware('guest')->group(function (): void {
     Route::get('/register', fn () => Inertia::render('auth/register'))->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store']);

@@ -21,7 +21,10 @@ class IndexTicketRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', Rule::enum(TicketStatus::class)],
+            'status' => [
+                'nullable',
+                Rule::in(['active', ...array_column(TicketStatus::cases(), 'value')]),
+            ],
             'priority' => ['nullable', Rule::enum(TicketPriority::class)],
         ];
     }

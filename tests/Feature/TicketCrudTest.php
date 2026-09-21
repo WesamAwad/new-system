@@ -8,7 +8,7 @@ use App\Models\Workshop;
 use App\Models\WorkshopService;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('customer can create read update and soft delete own pending ticket', function () {
+test('customer can create read update and cancel own ticket', function () {
     $customer = User::factory()->customer()->create();
     $category = Category::factory()->create();
     $workshop = Workshop::factory()->create();
@@ -47,11 +47,61 @@ test('customer can create read update and soft delete own pending ticket', funct
     expect($ticket->fresh()->title)->toBe('Broken kitchen faucet');
 
     $this->actingAs($customer)
+        ->patch(route('tickets.update', $ticket), ['status' => 'cancelled'])
+        ->assertRedirect(route('tickets.show', $ticket));
+
+    expect($ticket->fresh()->status)->toBe(TicketStatus::Cancelled)
+        ->and(Ticket::query()->whereKey($ticket->id)->exists())->toBeTrue();
+});
+
+test('customer cannot cancel or edit a ticket once it is in progress', function () {
+    $customer = User::factory()->customer()->create();
+    $ticket = Ticket::factory()->for($customer, 'customer')->create([
+        'status' => TicketStatus::InProgress,
+    ]);
+
+    $this->actingAs($customer)
+        ->patch(route('tickets.update', $ticket), ['status' => 'cancelled'])
+        ->assertForbidden();
+
+    $this->actingAs($customer)
+        ->patch(route('tickets.update', $ticket), ['title' => 'Should fail'])
+        ->assertForbidden();
+
+    expect($ticket->fresh()->status)->toBe(TicketStatus::InProgress);
+});
+
+test('customer cannot set an arbitrary status other than cancelled', function () {
+    $customer = User::factory()->customer()->create();
+    $ticket = Ticket::factory()->for($customer, 'customer')->create([
+        'status' => TicketStatus::Assigned,
+    ]);
+
+    $this->actingAs($customer)
+        ->patch(route('tickets.update', $ticket), ['status' => 'completed'])
+        ->assertInvalid(['status']);
+
+    expect($ticket->fresh()->status)->toBe(TicketStatus::Assigned);
+});
+
+test('customer cannot delete their own ticket, only admins can', function () {
+    $customer = User::factory()->customer()->create();
+    $ticket = Ticket::factory()->for($customer, 'customer')->create([
+        'status' => TicketStatus::Assigned,
+    ]);
+
+    $this->actingAs($customer)
+        ->delete(route('tickets.destroy', $ticket))
+        ->assertForbidden();
+
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
         ->delete(route('tickets.destroy', $ticket))
         ->assertRedirect(route('tickets.index'));
 
-    expect(Ticket::query()->whereKey($ticket->id)->exists())->toBeFalse()
-        ->and(Ticket::withTrashed()->whereKey($ticket->id)->exists())->toBeTrue();
+    expect(Ticket::withTrashed()->whereKey($ticket->id)->exists())->toBeTrue()
+        ->and(Ticket::query()->whereKey($ticket->id)->exists())->toBeFalse();
 });
 
 test('creating a ticket with a workshop pre-assigns its technician', function () {

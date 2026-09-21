@@ -39,6 +39,32 @@ test('tickets can be filtered by status and priority', function () {
             ->where('filters.priority', 'high'));
 });
 
+test('the grouped active status filter matches assigned and in_progress tickets', function () {
+    $customer = User::factory()->customer()->create();
+
+    Ticket::factory()->for($customer, 'customer')->create([
+        'title' => 'Assigned ticket',
+        'status' => TicketStatus::Assigned,
+    ]);
+
+    Ticket::factory()->for($customer, 'customer')->create([
+        'title' => 'In progress ticket',
+        'status' => TicketStatus::InProgress,
+    ]);
+
+    Ticket::factory()->for($customer, 'customer')->create([
+        'title' => 'Completed ticket',
+        'status' => TicketStatus::Completed,
+    ]);
+
+    $this->actingAs($customer)
+        ->get(route('tickets.index', ['status' => 'active']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('tickets.data', 2)
+            ->where('filters.status', 'active'));
+});
+
 test('tickets search supports arabic text', function () {
     $customer = User::factory()->customer()->create();
 

@@ -1,14 +1,23 @@
 import {
-    destroy,
     index as ticketsIndex,
     update,
 } from '@/actions/App/Http/Controllers/TicketController';
 import { store as storeUpdate } from '@/actions/App/Http/Controllers/TicketUpdateController';
+import Footer from '@/components/landing/Footer';
+import Header from '@/components/landing/Header';
 import InputError from '@/components/input-error';
 import { PriorityLabel, StatusBadge } from '@/components/ticket-badges';
-import AppLayout from '@/layouts/app-layout';
-import type { Ticket } from '@/types';
+import { workshopAvatarUrl } from '@/lib/avatar';
+import {
+    dangerButtonClassName,
+    fieldClassName,
+    labelClassName,
+    primaryButtonClassName,
+    secondaryButtonClassName,
+} from '@/lib/ui';
+import type { Ticket, TicketStatus } from '@/types';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 type TechnicianOption = {
     id: number;
@@ -21,323 +30,540 @@ type Props = {
     technicians: TechnicianOption[];
 };
 
+const steps: Array<{ key: TicketStatus; label: string }> = [
+    { key: 'pending', label: 'تم الإرسال' },
+    { key: 'assigned', label: 'قيد المراجعة / تم التكليف' },
+    { key: 'in_progress', label: 'قيد الصيانة' },
+    { key: 'completed', label: 'مكتملة' },
+];
+
+function stepIndex(status: TicketStatus): number {
+    return steps.findIndex((step) => step.key === status);
+}
+
 export default function TicketsShow({ ticket, technicians }: Props) {
     const user = usePage().props.auth.user;
+    const [showEditForm, setShowEditForm] = useState(false);
+
     const isAdmin = user?.role === 'admin';
+    const isAssignedTechnician =
+        user?.role === 'technician' && ticket.assigned_to === user.id;
+    const isStaffWithAccess = isAdmin || isAssignedTechnician;
+    const isOwner = user?.role === 'customer' && ticket.user_id === user.id;
     const isStaff = isAdmin || user?.role === 'technician';
-    const canDelete =
-        user?.role === 'admin' ||
-        (user?.role === 'customer' &&
-            ticket.user_id === user.id &&
-            ticket.status === 'pending');
-    const canUpdate =
-        user?.role === 'admin' ||
-        (user?.role === 'technician' && ticket.assigned_to === user.id) ||
-        (user?.role === 'customer' && ticket.user_id === user.id);
+
+    const isCancelled = ticket.status === 'cancelled';
+    const isEditableWindow =
+        ticket.status === 'pending' || ticket.status === 'assigned';
+    const currentStep = stepIndex(ticket.status);
+
+    const workshop = ticket.assignee?.workshop ?? null;
 
     return (
-        <AppLayout title={ticket.ticket_number}>
+        <>
             <Head title={ticket.ticket_number} />
 
-            <div className="mb-4">
-                <Link
-                    href={ticketsIndex()}
-                    className="text-sm text-teal-700 hover:underline"
-                >
-                    ← Back to tickets
-                </Link>
-            </div>
+            <div dir="rtl" className="bg-muted text-foreground min-h-screen">
+                <Header />
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                <section className="space-y-4 lg:col-span-2">
-                    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex flex-wrap items-center gap-3">
-                            <StatusBadge status={ticket.status} />
-                            <PriorityLabel priority={ticket.priority} />
-                        </div>
-                        <h2 className="text-xl font-semibold text-slate-900">
-                            {ticket.title}
-                        </h2>
-                        <p className="mt-3 whitespace-pre-wrap text-slate-700">
-                            {ticket.description}
-                        </p>
-                        <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-                            <div>
-                                <dt className="text-slate-500">Category</dt>
-                                <dd className="font-medium">
-                                    {ticket.category?.name ?? '—'}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="text-slate-500">Address</dt>
-                                <dd className="font-medium">
-                                    {ticket.address}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="text-slate-500">Customer</dt>
-                                <dd className="font-medium">
-                                    {ticket.customer?.name ?? '—'}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="text-slate-500">Assignee</dt>
-                                <dd className="font-medium">
-                                    {ticket.assignee?.name ?? 'Unassigned'}
-                                </dd>
-                            </div>
-                        </dl>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <h3 className="mb-4 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-                            Updates
-                        </h3>
-                        <div className="space-y-4">
-                            {(ticket.updates ?? []).length === 0 && (
-                                <p className="text-sm text-slate-500">
-                                    No updates yet.
-                                </p>
-                            )}
-                            {(ticket.updates ?? []).map((updateItem) => (
-                                <div
-                                    key={updateItem.id}
-                                    className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3"
-                                >
-                                    <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                        <span className="font-medium text-slate-700">
-                                            {updateItem.user?.name ?? 'User'}
-                                        </span>
-                                        <span>
-                                            {new Date(
-                                                updateItem.created_at,
-                                            ).toLocaleString()}
-                                        </span>
-                                        {updateItem.is_internal && (
-                                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">
-                                                Internal
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-slate-800">
-                                        {updateItem.message}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-
-                        <Form
-                            {...storeUpdate.form(ticket.id)}
-                            className="mt-6 space-y-3 border-t border-slate-100 pt-4"
-                            resetOnSuccess
+                <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+                    <div className="mb-6">
+                        <Link
+                            href={ticketsIndex()}
+                            className="text-accent text-sm font-medium hover:underline"
                         >
-                            {({ errors, processing }) => (
-                                <>
-                                    <label
-                                        htmlFor="message"
-                                        className="block text-sm font-medium text-slate-700"
-                                    >
-                                        Add update
-                                    </label>
-                                    <textarea
-                                        id="message"
-                                        name="message"
-                                        required
-                                        rows={3}
-                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-                                    />
-                                    <InputError message={errors.message} />
-                                    {isStaff && (
-                                        <label className="flex items-center gap-2 text-sm text-slate-600">
-                                            <input
-                                                type="checkbox"
-                                                name="is_internal"
-                                                value="1"
-                                                className="rounded border-slate-300 text-teal-700"
-                                            />
-                                            Internal note
-                                        </label>
-                                    )}
-                                    <button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
-                                    >
-                                        {processing
-                                            ? 'Posting…'
-                                            : 'Post update'}
-                                    </button>
-                                </>
-                            )}
-                        </Form>
+                            ← رجوع لطلباتي
+                        </Link>
                     </div>
-                </section>
 
-                <aside className="space-y-4">
-                    {isAdmin && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="mb-3 text-sm font-semibold text-slate-800">
-                                Assign technician
-                            </h3>
-                            <Form
-                                action={update.url(ticket.id)}
-                                method="patch"
-                                className="space-y-3"
-                            >
-                                {({ errors, processing }) => (
-                                    <>
-                                        <select
-                                            name="assigned_to"
-                                            defaultValue={
-                                                ticket.assigned_to ?? ''
-                                            }
-                                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                                        >
-                                            <option value="">Unassigned</option>
-                                            {technicians.map((technician) => (
-                                                <option
-                                                    key={technician.id}
-                                                    value={technician.id}
+                    <div className="grid gap-6 lg:grid-cols-3">
+                        <div className="space-y-6 lg:col-span-2">
+                            <section className="border-border/40 rounded-2xl border bg-white p-6 shadow-sm">
+                                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                    <span className="bg-muted text-foreground rounded-full px-3 py-1 font-mono text-xs font-semibold">
+                                        {ticket.ticket_number}
+                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <StatusBadge status={ticket.status} />
+                                        <PriorityLabel
+                                            priority={ticket.priority}
+                                        />
+                                    </div>
+                                </div>
+
+                                {isCancelled ? (
+                                    <div
+                                        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
+                                        role="status"
+                                    >
+                                        تم إلغاء هذا الطلب.
+                                    </div>
+                                ) : (
+                                    <ol className="flex items-start gap-2">
+                                        {steps.map((step, index) => {
+                                            const done = index < currentStep;
+                                            const active =
+                                                index === currentStep;
+
+                                            return (
+                                                <li
+                                                    key={step.key}
+                                                    className="flex flex-1 items-center gap-2"
                                                 >
-                                                    {technician.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <InputError
-                                            message={errors.assigned_to}
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="w-full rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60"
-                                        >
-                                            {processing
-                                                ? 'Saving…'
-                                                : 'Save assignee'}
-                                        </button>
-                                    </>
+                                                    <div className="flex flex-col items-center gap-1 text-center">
+                                                        <span
+                                                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                                                done || active
+                                                                    ? 'bg-primary text-white'
+                                                                    : 'bg-muted text-muted-foreground'
+                                                            }`}
+                                                        >
+                                                            {done
+                                                                ? '✓'
+                                                                : index + 1}
+                                                        </span>
+                                                        <span
+                                                            className={`max-w-20 text-[11px] leading-tight ${
+                                                                active
+                                                                    ? 'text-foreground font-semibold'
+                                                                    : 'text-muted-foreground'
+                                                            }`}
+                                                        >
+                                                            {step.label}
+                                                        </span>
+                                                    </div>
+                                                    {index <
+                                                        steps.length - 1 && (
+                                                        <span
+                                                            className={`h-0.5 flex-1 ${done ? 'bg-primary' : 'bg-muted'}`}
+                                                        />
+                                                    )}
+                                                </li>
+                                            );
+                                        })}
+                                    </ol>
                                 )}
-                            </Form>
-                        </div>
-                    )}
+                            </section>
 
-                    {canUpdate && isStaff && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="mb-3 text-sm font-semibold text-slate-800">
-                                Update status
-                            </h3>
-                            <Form
-                                action={update.url(ticket.id)}
-                                method="patch"
-                                className="space-y-3"
-                            >
-                                {({ errors, processing }) => (
-                                    <>
-                                        <select
-                                            name="status"
-                                            defaultValue={ticket.status}
-                                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                                        >
-                                            <option value="pending">
-                                                Pending
-                                            </option>
-                                            <option value="assigned">
-                                                Assigned
-                                            </option>
-                                            <option value="in_progress">
-                                                In progress
-                                            </option>
-                                            <option value="completed">
-                                                Completed
-                                            </option>
-                                            <option value="cancelled">
-                                                Cancelled
-                                            </option>
-                                        </select>
-                                        <InputError message={errors.status} />
-                                        <button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                                        >
-                                            {processing
-                                                ? 'Saving…'
-                                                : 'Save status'}
-                                        </button>
-                                    </>
-                                )}
-                            </Form>
-                        </div>
-                    )}
+                            <section className="border-border/40 rounded-2xl border bg-white p-6 shadow-sm">
+                                <h1 className="text-heading text-lg font-bold">
+                                    {ticket.title}
+                                </h1>
+                                <p className="text-muted-foreground mt-3 text-sm whitespace-pre-wrap">
+                                    {ticket.description}
+                                </p>
+                                <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
+                                    <div>
+                                        <dt className="text-muted-foreground">
+                                            الخدمة
+                                        </dt>
+                                        <dd className="text-foreground font-medium">
+                                            {ticket.category?.name ?? '—'}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-muted-foreground">
+                                            العنوان
+                                        </dt>
+                                        <dd className="text-foreground font-medium">
+                                            {ticket.address}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </section>
 
-                    {canUpdate && !isStaff && (
-                        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="mb-3 text-sm font-semibold text-slate-800">
-                                Edit details
-                            </h3>
-                            <Form
-                                action={update.url(ticket.id)}
-                                method="patch"
-                                className="space-y-3"
-                            >
-                                {({ errors, processing }) => (
-                                    <>
-                                        <input
-                                            name="title"
-                                            defaultValue={ticket.title}
-                                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                                        />
-                                        <InputError message={errors.title} />
-                                        <textarea
-                                            name="description"
-                                            defaultValue={ticket.description}
-                                            rows={4}
-                                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                                        />
-                                        <InputError
-                                            message={errors.description}
-                                        />
-                                        <input
-                                            name="address"
-                                            defaultValue={ticket.address}
-                                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                                        />
-                                        <InputError message={errors.address} />
-                                        <button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                                        >
-                                            {processing
-                                                ? 'Saving…'
-                                                : 'Save changes'}
-                                        </button>
-                                    </>
-                                )}
-                            </Form>
-                        </div>
-                    )}
+                            <section className="border-border/40 rounded-2xl border bg-white p-6 shadow-sm">
+                                <h2 className="text-muted-foreground mb-4 text-sm font-bold tracking-wide uppercase">
+                                    سجل التحديثات
+                                </h2>
+                                <div className="space-y-4">
+                                    {(ticket.updates ?? []).length === 0 && (
+                                        <p className="text-muted-foreground text-sm">
+                                            لا توجد تحديثات بعد.
+                                        </p>
+                                    )}
+                                    {(ticket.updates ?? []).map(
+                                        (updateItem) => (
+                                            <div
+                                                key={updateItem.id}
+                                                className="border-border/40 bg-muted rounded-xl border px-4 py-3"
+                                            >
+                                                <div className="text-muted-foreground mb-1 flex flex-wrap items-center gap-2 text-xs">
+                                                    <span className="text-foreground font-medium">
+                                                        {updateItem.user
+                                                            ?.name ?? 'مستخدم'}
+                                                    </span>
+                                                    <span>
+                                                        {new Date(
+                                                            updateItem.created_at,
+                                                        ).toLocaleString(
+                                                            'ar-EG',
+                                                        )}
+                                                    </span>
+                                                    {updateItem.is_internal && (
+                                                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">
+                                                            ملاحظة داخلية
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-foreground text-sm">
+                                                    {updateItem.message}
+                                                </p>
+                                            </div>
+                                        ),
+                                    )}
+                                </div>
 
-                    {canDelete && (
-                        <Form action={destroy.url(ticket.id)} method="delete">
-                            {({ processing }) => (
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="w-full rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
-                                    onClick={(event) => {
-                                        if (!confirm('Delete this ticket?')) {
-                                            event.preventDefault();
-                                        }
-                                    }}
+                                <Form
+                                    {...storeUpdate.form(ticket.id)}
+                                    className="border-border/40 mt-6 space-y-3 border-t pt-4"
+                                    resetOnSuccess
                                 >
-                                    {processing ? 'Deleting…' : 'Delete ticket'}
-                                </button>
+                                    {({ errors, processing }) => (
+                                        <>
+                                            <label
+                                                htmlFor="message"
+                                                className={labelClassName}
+                                            >
+                                                إضافة تحديث
+                                            </label>
+                                            <textarea
+                                                id="message"
+                                                name="message"
+                                                required
+                                                rows={3}
+                                                className={fieldClassName}
+                                            />
+                                            <InputError
+                                                message={errors.message}
+                                            />
+                                            {isStaff && (
+                                                <label className="text-muted-foreground flex items-center gap-2 text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="is_internal"
+                                                        value="1"
+                                                        className="border-border text-primary rounded"
+                                                    />
+                                                    ملاحظة داخلية (غير مرئية
+                                                    للعميل)
+                                                </label>
+                                            )}
+                                            <button
+                                                type="submit"
+                                                disabled={processing}
+                                                className={
+                                                    primaryButtonClassName
+                                                }
+                                            >
+                                                {processing
+                                                    ? 'جارِ الإرسال…'
+                                                    : 'إرسال التحديث'}
+                                            </button>
+                                        </>
+                                    )}
+                                </Form>
+                            </section>
+                        </div>
+
+                        <aside className="space-y-6">
+                            {ticket.assignee && (
+                                <div className="border-border/40 rounded-2xl border bg-white p-5 shadow-sm">
+                                    <h2 className="text-heading mb-3 text-sm font-bold">
+                                        الورشة المسؤولة
+                                    </h2>
+                                    <div className="flex items-center gap-3">
+                                        <img
+                                            src={
+                                                workshop?.logo ??
+                                                workshopAvatarUrl(
+                                                    workshop?.name ??
+                                                        ticket.assignee.name,
+                                                )
+                                            }
+                                            alt={
+                                                workshop?.name ??
+                                                ticket.assignee.name
+                                            }
+                                            className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                                        />
+                                        <div className="min-w-0">
+                                            <p className="text-foreground truncate font-semibold">
+                                                {workshop?.name ??
+                                                    ticket.assignee.name}
+                                            </p>
+                                            {workshop && (
+                                                <p className="text-muted-foreground truncate text-xs">
+                                                    {workshop.city} —{' '}
+                                                    {workshop.address}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {ticket.assignee.phone && (
+                                        <a
+                                            href={`tel:${ticket.assignee.phone}`}
+                                            className={`${primaryButtonClassName} mt-4 w-full`}
+                                        >
+                                            تواصل مع الفني
+                                        </a>
+                                    )}
+                                </div>
                             )}
-                        </Form>
-                    )}
-                </aside>
+
+                            {isAdmin && (
+                                <div className="border-border/40 rounded-2xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-heading mb-3 text-sm font-bold">
+                                        تعيين فني
+                                    </h3>
+                                    <Form
+                                        action={update.url(ticket.id)}
+                                        method="patch"
+                                        className="space-y-3"
+                                    >
+                                        {({ errors, processing }) => (
+                                            <>
+                                                <select
+                                                    name="assigned_to"
+                                                    defaultValue={
+                                                        ticket.assigned_to ?? ''
+                                                    }
+                                                    className={fieldClassName}
+                                                >
+                                                    <option value="">
+                                                        غير معيّن
+                                                    </option>
+                                                    {technicians.map(
+                                                        (technician) => (
+                                                            <option
+                                                                key={
+                                                                    technician.id
+                                                                }
+                                                                value={
+                                                                    technician.id
+                                                                }
+                                                            >
+                                                                {
+                                                                    technician.name
+                                                                }
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                                <InputError
+                                                    message={errors.assigned_to}
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                    className={`${primaryButtonClassName} w-full`}
+                                                >
+                                                    {processing
+                                                        ? 'جارِ الحفظ…'
+                                                        : 'حفظ الفني'}
+                                                </button>
+                                            </>
+                                        )}
+                                    </Form>
+                                </div>
+                            )}
+
+                            {isStaffWithAccess && (
+                                <div className="border-border/40 rounded-2xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-heading mb-3 text-sm font-bold">
+                                        تحديث الحالة
+                                    </h3>
+                                    <Form
+                                        action={update.url(ticket.id)}
+                                        method="patch"
+                                        className="space-y-3"
+                                    >
+                                        {({ errors, processing }) => (
+                                            <>
+                                                <select
+                                                    name="status"
+                                                    defaultValue={ticket.status}
+                                                    className={fieldClassName}
+                                                >
+                                                    <option value="pending">
+                                                        بانتظار المراجعة
+                                                    </option>
+                                                    <option value="assigned">
+                                                        تم التكليف
+                                                    </option>
+                                                    <option value="in_progress">
+                                                        قيد الصيانة
+                                                    </option>
+                                                    <option value="completed">
+                                                        مكتملة
+                                                    </option>
+                                                    <option value="cancelled">
+                                                        ملغاة
+                                                    </option>
+                                                </select>
+                                                <InputError
+                                                    message={errors.status}
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                    className={`${primaryButtonClassName} w-full`}
+                                                >
+                                                    {processing
+                                                        ? 'جارِ الحفظ…'
+                                                        : 'حفظ الحالة'}
+                                                </button>
+                                            </>
+                                        )}
+                                    </Form>
+                                </div>
+                            )}
+
+                            {isOwner && (
+                                <div className="border-border/40 rounded-2xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-heading mb-3 text-sm font-bold">
+                                        إجراءات الطلب
+                                    </h3>
+
+                                    {isEditableWindow ? (
+                                        <div className="space-y-3">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowEditForm(
+                                                        (open) => !open,
+                                                    )
+                                                }
+                                                className={`${secondaryButtonClassName} w-full`}
+                                            >
+                                                {showEditForm
+                                                    ? 'إخفاء تعديل التفاصيل'
+                                                    : 'تعديل تفاصيل الطلب'}
+                                            </button>
+
+                                            {showEditForm && (
+                                                <Form
+                                                    action={update.url(
+                                                        ticket.id,
+                                                    )}
+                                                    method="patch"
+                                                    className="space-y-3"
+                                                >
+                                                    {({
+                                                        errors,
+                                                        processing,
+                                                    }) => (
+                                                        <>
+                                                            <input
+                                                                name="title"
+                                                                defaultValue={
+                                                                    ticket.title
+                                                                }
+                                                                className={
+                                                                    fieldClassName
+                                                                }
+                                                            />
+                                                            <InputError
+                                                                message={
+                                                                    errors.title
+                                                                }
+                                                            />
+                                                            <textarea
+                                                                name="description"
+                                                                defaultValue={
+                                                                    ticket.description
+                                                                }
+                                                                rows={4}
+                                                                className={
+                                                                    fieldClassName
+                                                                }
+                                                            />
+                                                            <InputError
+                                                                message={
+                                                                    errors.description
+                                                                }
+                                                            />
+                                                            <input
+                                                                name="address"
+                                                                defaultValue={
+                                                                    ticket.address
+                                                                }
+                                                                className={
+                                                                    fieldClassName
+                                                                }
+                                                            />
+                                                            <InputError
+                                                                message={
+                                                                    errors.address
+                                                                }
+                                                            />
+                                                            <button
+                                                                type="submit"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                                className={`${primaryButtonClassName} w-full`}
+                                                            >
+                                                                {processing
+                                                                    ? 'جارِ الحفظ…'
+                                                                    : 'حفظ التعديلات'}
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </Form>
+                                            )}
+
+                                            <Form
+                                                action={update.url(ticket.id)}
+                                                method="patch"
+                                            >
+                                                {({ processing }) => (
+                                                    <>
+                                                        <input
+                                                            type="hidden"
+                                                            name="status"
+                                                            value="cancelled"
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            className={`${dangerButtonClassName} w-full`}
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+                                                                if (
+                                                                    !confirm(
+                                                                        'هل تريد بالتأكيد إلغاء هذا الطلب؟',
+                                                                    )
+                                                                ) {
+                                                                    event.preventDefault();
+                                                                }
+                                                            }}
+                                                        >
+                                                            {processing
+                                                                ? 'جارِ الإلغاء…'
+                                                                : 'إلغاء الطلب'}
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        </div>
+                                    ) : (
+                                        <p className="text-muted-foreground text-sm">
+                                            لم يعد بالإمكان تعديل أو إلغاء هذا
+                                            الطلب بعد بدء العمل عليه.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </aside>
+                    </div>
+                </main>
+
+                <Footer />
             </div>
-        </AppLayout>
+        </>
     );
 }

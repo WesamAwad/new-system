@@ -55,6 +55,10 @@ export type TicketUser = {
     email?: string;
     phone?: string | null;
     role?: string;
+    workshop?: Pick<
+        Workshop,
+        'id' | 'name' | 'logo' | 'city' | 'address'
+    > | null;
 };
 
 export type TicketUpdate = {

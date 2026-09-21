@@ -15,8 +15,22 @@ class UpdateTicketRequest extends FormRequest
     {
         /** @var Ticket $ticket */
         $ticket = $this->route('ticket');
+        $user = $this->user();
 
-        return $this->user()?->can('update', $ticket) ?? false;
+        if ($user === null || ! $user->can('update', $ticket)) {
+            return false;
+        }
+
+        if ($user->isCustomer() && ! $this->isStillEditable($ticket)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function isStillEditable(Ticket $ticket): bool
+    {
+        return in_array($ticket->status, [TicketStatus::Pending, TicketStatus::Assigned], true);
     }
 
     protected function prepareForValidation(): void
@@ -54,6 +68,10 @@ class UpdateTicketRequest extends FormRequest
                 'integer',
                 Rule::exists('users', 'id')->where('role', UserRole::Technician->value),
             ];
+        }
+
+        if ($user?->isCustomer()) {
+            $rules['status'] = ['sometimes', Rule::in([TicketStatus::Cancelled->value])];
         }
 
         return $rules;

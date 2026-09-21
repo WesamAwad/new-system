@@ -3,15 +3,16 @@ import {
     show,
 } from '@/actions/App/Http/Controllers/TicketController';
 import { index as workshopsIndex } from '@/actions/App/Http/Controllers/WorkshopController';
-import { PriorityLabel, StatusBadge } from '@/components/ticket-badges';
-import AppLayout from '@/layouts/app-layout';
+import Footer from '@/components/landing/Footer';
+import Header from '@/components/landing/Header';
+import { StatusBadge } from '@/components/ticket-badges';
 import {
     fieldClassName,
     labelClassName,
     primaryButtonClassName,
     secondaryButtonClassName,
 } from '@/lib/ui';
-import type { Paginated, Ticket, TicketPriority, TicketStatus } from '@/types';
+import type { Paginated, Ticket } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 
@@ -26,19 +27,25 @@ type Props = {
     filters: Filters;
 };
 
-const statuses: TicketStatus[] = [
-    'pending',
-    'assigned',
-    'in_progress',
-    'completed',
-    'cancelled',
+const statusOptions: Array<{ value: string; label: string }> = [
+    { value: '', label: 'الكل' },
+    { value: 'pending', label: 'قيد الإرسال' },
+    { value: 'active', label: 'قيد المتابعة' },
+    { value: 'completed', label: 'مكتملة' },
+    { value: 'cancelled', label: 'ملغاة' },
 ];
 
-const priorities: TicketPriority[] = ['low', 'medium', 'high', 'emergency'];
+function formatDate(value: string): string {
+    return new Date(value).toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+}
 
 export default function TicketsIndex({ tickets, filters }: Props) {
     const user = usePage().props.auth.user;
-    const canCreate = user?.role === 'customer' || user?.role === 'admin';
+    const canCreate = user?.role === 'customer';
     const hasActiveFilters = Boolean(
         filters.search || filters.status || filters.priority,
     );
@@ -48,7 +55,6 @@ export default function TicketsIndex({ tickets, filters }: Props) {
         const formData = new FormData(event.currentTarget);
         const search = formData.get('search');
         const status = formData.get('status');
-        const priority = formData.get('priority');
 
         router.get(
             ticketsIndex.url(),
@@ -60,10 +66,6 @@ export default function TicketsIndex({ tickets, filters }: Props) {
                 status:
                     typeof status === 'string' && status !== ''
                         ? status
-                        : undefined,
-                priority:
-                    typeof priority === 'string' && priority !== ''
-                        ? priority
                         : undefined,
             },
             {
@@ -87,234 +89,204 @@ export default function TicketsIndex({ tickets, filters }: Props) {
     }
 
     return (
-        <AppLayout title="Tickets">
-            <Head title="Tickets" />
+        <>
+            <Head title="طلباتي" />
 
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-slate-600">
-                    {tickets.total} ticket{tickets.total === 1 ? '' : 's'}
-                    {hasActiveFilters ? ' (filtered)' : ''}
-                </p>
-                {canCreate && (
-                    <Link
-                        href={workshopsIndex()}
-                        className={primaryButtonClassName}
-                    >
-                        Browse workshops
-                    </Link>
-                )}
-            </div>
+            <div dir="rtl" className="bg-muted text-foreground min-h-screen">
+                <Header />
 
-            <form
-                onSubmit={submitFilters}
-                className="mb-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4"
-            >
-                <div className="sm:col-span-2 lg:col-span-2">
-                    <label htmlFor="search" className={labelClassName}>
-                        Search
-                    </label>
-                    <input
-                        id="search"
-                        name="search"
-                        type="search"
-                        defaultValue={filters.search ?? ''}
-                        placeholder="Title, number, address…"
-                        className={fieldClassName}
-                    />
-                </div>
-                <div>
-                    <label htmlFor="status" className={labelClassName}>
-                        Status
-                    </label>
-                    <select
-                        id="status"
-                        name="status"
-                        defaultValue={filters.status ?? ''}
-                        className={fieldClassName}
-                    >
-                        <option value="">All statuses</option>
-                        {statuses.map((status) => (
-                            <option key={status} value={status}>
-                                {status.replace('_', ' ')}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="priority" className={labelClassName}>
-                        Priority
-                    </label>
-                    <select
-                        id="priority"
-                        name="priority"
-                        defaultValue={filters.priority ?? ''}
-                        className={fieldClassName}
-                    >
-                        <option value="">All priorities</option>
-                        {priorities.map((priority) => (
-                            <option key={priority} value={priority}>
-                                {priority}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">
-                    <button type="submit" className={primaryButtonClassName}>
-                        Apply filters
-                    </button>
-                    {hasActiveFilters && (
-                        <button
-                            type="button"
-                            onClick={resetFilters}
-                            className={secondaryButtonClassName}
-                        >
-                            Reset
-                        </button>
-                    )}
-                </div>
-            </form>
-
-            {tickets.data.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-                    <p className="text-slate-600">
-                        {hasActiveFilters
-                            ? 'No tickets match your filters.'
-                            : 'No tickets yet.'}
-                    </p>
-                    {canCreate && !hasActiveFilters && (
-                        <Link
-                            href={workshopsIndex()}
-                            className={`${primaryButtonClassName} mt-4`}
-                        >
-                            Browse workshops
-                        </Link>
-                    )}
-                    {hasActiveFilters && (
-                        <button
-                            type="button"
-                            onClick={resetFilters}
-                            className={`${secondaryButtonClassName} mt-4`}
-                        >
-                            Clear filters
-                        </button>
-                    )}
-                </div>
-            ) : (
-                <>
-                    <div className="space-y-3 md:hidden">
-                        {tickets.data.map((ticket) => (
+                <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+                    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <h1 className="text-heading text-2xl font-bold tracking-tight sm:text-3xl">
+                                {canCreate ? 'طلباتي' : 'جميع الطلبات'}
+                            </h1>
+                            <p className="text-muted-foreground mt-2 text-sm">
+                                {canCreate
+                                    ? 'متابعة وإدارة جميع طلبات الصيانة الخاصة بك.'
+                                    : 'إدارة ومتابعة طلبات الصيانة.'}
+                            </p>
+                        </div>
+                        {canCreate && (
                             <Link
-                                key={ticket.id}
-                                href={show(ticket.id)}
-                                className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-                                prefetch
+                                href={workshopsIndex()}
+                                className={primaryButtonClassName}
                             >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <p className="font-medium text-teal-800">
+                                تصفح الورش / طلب جديد
+                            </Link>
+                        )}
+                    </div>
+
+                    <form
+                        onSubmit={submitFilters}
+                        className="border-border/40 mb-8 grid gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:grid-cols-3"
+                    >
+                        <div className="sm:col-span-2">
+                            <label htmlFor="search" className={labelClassName}>
+                                البحث
+                            </label>
+                            <input
+                                id="search"
+                                name="search"
+                                type="search"
+                                defaultValue={filters.search ?? ''}
+                                placeholder="رقم الطلب أو العنوان…"
+                                className={fieldClassName}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="status" className={labelClassName}>
+                                الحالة
+                            </label>
+                            <select
+                                id="status"
+                                name="status"
+                                defaultValue={filters.status ?? ''}
+                                className={fieldClassName}
+                            >
+                                {statusOptions.map((option) => (
+                                    <option
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex flex-wrap gap-2 sm:col-span-3">
+                            <button
+                                type="submit"
+                                className={primaryButtonClassName}
+                            >
+                                تطبيق الفلاتر
+                            </button>
+                            {hasActiveFilters && (
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className={secondaryButtonClassName}
+                                >
+                                    مسح الفلاتر
+                                </button>
+                            )}
+                        </div>
+                    </form>
+
+                    {tickets.data.length === 0 ? (
+                        <div className="border-border rounded-2xl border border-dashed bg-white px-6 py-14 text-center">
+                            <div
+                                className="bg-primary/10 mx-auto flex h-14 w-14 items-center justify-center rounded-full text-2xl"
+                                aria-hidden="true"
+                            >
+                                🧾
+                            </div>
+                            <p className="text-muted-foreground mt-4">
+                                {hasActiveFilters
+                                    ? 'لا توجد طلبات مطابقة لبحثك.'
+                                    : 'لا توجد طلبات صيانة بعد.'}
+                            </p>
+                            {canCreate && !hasActiveFilters && (
+                                <Link
+                                    href={workshopsIndex()}
+                                    className={`${primaryButtonClassName} mt-4`}
+                                >
+                                    تصفح الورش لتقديم طلب جديد
+                                </Link>
+                            )}
+                            {hasActiveFilters && (
+                                <button
+                                    type="button"
+                                    onClick={resetFilters}
+                                    className={`${secondaryButtonClassName} mt-4`}
+                                >
+                                    مسح الفلاتر
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                            {tickets.data.map((ticket) => (
+                                <Link
+                                    key={ticket.id}
+                                    href={show(ticket.id)}
+                                    prefetch
+                                    className="group border-border/40 flex flex-col gap-3 rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="bg-muted text-foreground rounded-full px-2.5 py-1 font-mono text-xs font-semibold">
                                             {ticket.ticket_number}
-                                        </p>
-                                        <p className="mt-1 truncate text-slate-800">
+                                        </span>
+                                        <StatusBadge status={ticket.status} />
+                                    </div>
+
+                                    <div>
+                                        <h2 className="text-heading truncate font-bold">
                                             {ticket.title}
-                                        </p>
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        </h2>
+                                        <p className="text-muted-foreground mt-0.5 text-sm">
                                             {ticket.category?.name ?? '—'}
+                                        </p>
+                                        {!canCreate &&
+                                            ticket.customer?.name && (
+                                                <p className="text-muted-foreground/70 mt-0.5 text-xs">
+                                                    العميل:{' '}
+                                                    {ticket.customer.name}
+                                                </p>
+                                            )}
+                                    </div>
+
+                                    <div className="text-muted-foreground text-sm">
+                                        <p className="truncate">
+                                            {ticket.address}
+                                        </p>
+                                        <p className="text-muted-foreground/70 mt-0.5 text-xs">
+                                            {formatDate(ticket.created_at)}
                                         </p>
                                     </div>
-                                    <StatusBadge status={ticket.status} />
-                                </div>
-                                <div className="mt-3 flex items-center justify-between text-sm">
-                                    <PriorityLabel priority={ticket.priority} />
-                                    <span className="text-slate-500">
-                                        {ticket.customer?.name ?? '—'}
+
+                                    <span className="text-accent mt-auto text-sm font-semibold group-hover:underline">
+                                        عرض التفاصيل ←
                                     </span>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-
-                    <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm md:block">
-                        <table className="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead className="bg-slate-50 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                                <tr>
-                                    <th className="px-4 py-3">Ticket</th>
-                                    <th className="px-4 py-3">Category</th>
-                                    <th className="px-4 py-3">Priority</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3">Customer</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {tickets.data.map((ticket) => (
-                                    <tr
-                                        key={ticket.id}
-                                        className="hover:bg-slate-50/80"
-                                    >
-                                        <td className="px-4 py-3">
-                                            <Link
-                                                href={show(ticket.id)}
-                                                className="font-medium text-teal-800 hover:underline"
-                                                prefetch
-                                            >
-                                                {ticket.ticket_number}
-                                            </Link>
-                                            <div className="mt-0.5 max-w-xs truncate text-slate-600">
-                                                {ticket.title}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-600">
-                                            {ticket.category?.name ?? '—'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <PriorityLabel
-                                                priority={ticket.priority}
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <StatusBadge
-                                                status={ticket.status}
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-600">
-                                            {ticket.customer?.name ?? '—'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
-            )}
-
-            {(tickets.prev_page_url || tickets.next_page_url) && (
-                <div className="mt-4 flex items-center justify-between text-sm">
-                    {tickets.prev_page_url ? (
-                        <Link
-                            href={tickets.prev_page_url}
-                            className="text-teal-700 hover:underline"
-                            preserveScroll
-                        >
-                            Previous
-                        </Link>
-                    ) : (
-                        <span />
+                                </Link>
+                            ))}
+                        </div>
                     )}
-                    <span className="text-slate-500">
-                        Page {tickets.current_page} of {tickets.last_page}
-                    </span>
-                    {tickets.next_page_url ? (
-                        <Link
-                            href={tickets.next_page_url}
-                            className="text-teal-700 hover:underline"
-                            preserveScroll
-                        >
-                            Next
-                        </Link>
-                    ) : (
-                        <span />
+
+                    {(tickets.prev_page_url || tickets.next_page_url) && (
+                        <div className="mt-8 flex items-center justify-between text-sm">
+                            {tickets.prev_page_url ? (
+                                <Link
+                                    href={tickets.prev_page_url}
+                                    className="text-accent font-medium hover:underline"
+                                    preserveScroll
+                                >
+                                    السابق
+                                </Link>
+                            ) : (
+                                <span />
+                            )}
+                            <span className="text-muted-foreground">
+                                صفحة {tickets.current_page} من{' '}
+                                {tickets.last_page}
+                            </span>
+                            {tickets.next_page_url ? (
+                                <Link
+                                    href={tickets.next_page_url}
+                                    className="text-accent font-medium hover:underline"
+                                    preserveScroll
+                                >
+                                    التالي
+                                </Link>
+                            ) : (
+                                <span />
+                            )}
+                        </div>
                     )}
-                </div>
-            )}
-        </AppLayout>
+                </main>
+
+                <Footer />
+            </div>
+        </>
     );
 }

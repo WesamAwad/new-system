@@ -2,11 +2,11 @@ import {
     destroy,
     store,
     update,
-} from '@/actions/App/Http/Controllers/CategoryController';
-import InputError from '@/components/input-error';
-import AppLayout from '@/layouts/app-layout';
-import type { Category } from '@/types';
-import { Form, Head, usePage } from '@inertiajs/react';
+} from "@/actions/App/Http/Controllers/CategoryController";
+import InputError from "@/components/input-error";
+import AppLayout from "@/layouts/app-layout";
+import type { Category } from "@/types";
+import { Form, Head, usePage } from "@inertiajs/react";
 
 type Props = {
     categories: Category[];
@@ -14,7 +14,7 @@ type Props = {
 
 export default function CategoriesIndex({ categories }: Props) {
     const user = usePage().props.auth.user;
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === "admin";
 
     return (
         <AppLayout title="Categories">
@@ -39,10 +39,10 @@ export default function CategoriesIndex({ categories }: Props) {
                                         </h2>
                                         <p className="mt-1 text-sm text-slate-600">
                                             {category.description ||
-                                                'No description'}
+                                                "No description"}
                                         </p>
                                         <p className="mt-2 text-sm text-slate-500">
-                                            Base price:{' '}
+                                            Base price:{" "}
                                             <span className="font-medium text-slate-800">
                                                 {category.base_price}
                                             </span>
@@ -67,7 +67,7 @@ export default function CategoriesIndex({ categories }: Props) {
                                                     onClick={(event) => {
                                                         if (
                                                             !confirm(
-                                                                'Delete this category?',
+                                                                "Delete this category?",
                                                             )
                                                         ) {
                                                             event.preventDefault();
@@ -130,8 +130,8 @@ export default function CategoriesIndex({ categories }: Props) {
                                                     className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60 sm:col-span-2"
                                                 >
                                                     {processing
-                                                        ? 'Saving…'
-                                                        : 'Save category'}
+                                                        ? "Saving…"
+                                                        : "Save category"}
                                                 </button>
                                             </>
                                         )}
@@ -197,8 +197,8 @@ export default function CategoriesIndex({ categories }: Props) {
                                         className="w-full rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                                     >
                                         {processing
-                                            ? 'Creating…'
-                                            : 'Create category'}
+                                            ? "Creating…"
+                                            : "Create category"}
                                     </button>
                                 </>
                             )}

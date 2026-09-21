@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Ticket;
 use App\Models\User;
@@ -47,13 +46,7 @@ class TicketPolicy
 
     public function delete(User $user, Ticket $ticket): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
-        return $user->isCustomer()
-            && $ticket->user_id === $user->id
-            && in_array($ticket->status, [TicketStatus::Pending, TicketStatus::Assigned], true);
+        return $user->isAdmin();
     }
 
     public function assign(User $user, Ticket $ticket): bool
