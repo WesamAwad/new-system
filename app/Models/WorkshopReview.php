@@ -13,6 +13,8 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $workshop_id
+ * @property int|null $user_id
+ * @property int|null $ticket_id
  * @property string $client_name
  * @property int $rating
  * @property string $comment
@@ -20,7 +22,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['workshop_id', 'client_name', 'rating', 'comment', 'is_approved'])]
+#[Fillable(['workshop_id', 'user_id', 'ticket_id', 'client_name', 'rating', 'comment', 'is_approved'])]
 class WorkshopReview extends Model
 {
     /** @use HasFactory<WorkshopReviewFactory> */
@@ -40,6 +42,16 @@ class WorkshopReview extends Model
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class);
     }
 
     /**

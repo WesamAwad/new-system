@@ -88,6 +88,7 @@ class TicketController extends Controller
             'customer:id,name,email,phone',
             'assignee:id,name,email,phone',
             'assignee.workshop:id,user_id,name,logo,city,address',
+            'review',
             'updates' => fn ($query) => $query->with('user:id,name,role')->latest(),
         ]);
 

@@ -30,6 +30,7 @@ export type WorkshopReview = {
     client_name: string;
     rating: number;
     comment: string;
+    is_approved: boolean;
     created_at: string;
 };
 
@@ -93,6 +94,7 @@ export type Ticket = {
     customer?: TicketUser;
     assignee?: TicketUser | null;
     updates?: TicketUpdate[];
+    review?: WorkshopReview | null;
 };
 
 export type Paginated<T> = {

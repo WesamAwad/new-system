@@ -51,7 +51,7 @@ test('technicians can register with the technician role', function () {
         'role' => UserRole::Technician->value,
     ]));
 
-    $response->assertRedirect(route('tickets.index'));
+    $response->assertRedirect(route('dashboard'));
 
     $user = User::query()->where('email', 'new.tech@example.com')->first();
 

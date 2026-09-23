@@ -67,4 +67,14 @@ class Workshop extends Model
     {
         return $query->where('is_featured', true);
     }
+
+    public function recalculateRatingStats(): void
+    {
+        $approved = $this->reviews()->approved();
+
+        $this->update([
+            'reviews_count' => $approved->count(),
+            'rating' => $approved->avg('rating') ?? 0,
+        ]);
+    }
 }

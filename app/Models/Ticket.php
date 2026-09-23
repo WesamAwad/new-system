@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -82,5 +83,10 @@ class Ticket extends Model
     public function updates(): HasMany
     {
         return $this->hasMany(TicketUpdate::class);
+    }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(WorkshopReview::class);
     }
 }

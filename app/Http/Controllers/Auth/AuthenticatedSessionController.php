@@ -38,7 +38,7 @@ class AuthenticatedSessionController extends Controller
     {
         return match ($user->role) {
             UserRole::Admin => route('categories.index'),
-            UserRole::Technician => route('tickets.index'),
+            UserRole::Technician => route('dashboard'),
             UserRole::Customer => route('home'),
         };
     }

@@ -25,7 +25,7 @@ test('clients can authenticate with the seeded test account', function () {
         ->and(auth()->user()?->role)->toBe(UserRole::Customer);
 });
 
-test('technicians are redirected to the tickets index after login', function () {
+test('technicians are redirected to the dashboard after login', function () {
     $technician = User::factory()->technician()->create([
         'email' => 'tech.login@example.com',
         'password' => 'Password1!',
@@ -36,7 +36,7 @@ test('technicians are redirected to the tickets index after login', function () 
         'password' => 'Password1!',
     ]);
 
-    $response->assertRedirect(route('tickets.index'));
+    $response->assertRedirect(route('dashboard'));
     $this->assertAuthenticatedAs($technician);
 });
 
